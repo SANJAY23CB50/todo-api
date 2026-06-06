@@ -1,4 +1,4 @@
-[Project URL](https://roadmap.sh/projects/todo-list-api)
+[Project URL](https://roadmap.sh/projects/blogging-platform-api)
 
 A RESTful API for managing todo lists with user authentication.
 
