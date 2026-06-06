@@ -1,5 +1,4 @@
-Project URL: https://roadmap.sh/projects/todo-list-api
-# Todo REST API
+[Project URL](https://roadmap.sh/projects/todo-list-api)
 
 A RESTful API for managing todo lists with user authentication.
 
