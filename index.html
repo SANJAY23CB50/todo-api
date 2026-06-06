@@ -1,0 +1,172 @@
+  <!DOCTYPE html>
+  <html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Todo App</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css"/>
+    <style>
+      * { box-sizing: border-box; margin: 0; padding: 0; }
+      body { font-family: sans-serif; background: #f5f5f5; color: #111; min-height: 100vh; }
+      .page { max-width: 480px; margin: 0 auto; padding: 2rem 1rem; }
+      .card { background: #fff; border: 1px solid #e0e0e0; border-radius: 12px; padding: 1.5rem; }
+      h1 { font-size: 22px; font-weight: 500; margin-bottom: 0.25rem; }
+      .sub { font-size: 14px; color: #666; margin-bottom: 1.5rem; }
+      .field { margin-bottom: 1rem; }
+      .field label { display: block; font-size: 13px; color: #666; margin-bottom: 4px; }
+      input[type=text], input[type=email], input[type=password] { width: 100%; padding: 8px 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; }
+      .btn { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 15px; cursor: pointer; background: #fff; transition: background 0.15s; }
+      .btn-primary { background: #111; color: #fff; border-color: #111; }
+      .btn-primary:hover { opacity: 0.85; }
+      .toggle { text-align: center; margin-top: 1rem; font-size: 13px; color: #666; }
+      .toggle a { color: #111; cursor: pointer; text-decoration: underline; }
+      .error { font-size: 13px; color: #c00; margin-top: 0.5rem; min-height: 18px; }
+      .todo-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+      .logout { font-size: 13px; color: #666; cursor: pointer; border: none; background: none; }
+      .add-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+      .add-row input { flex: 1; }
+      .add-row button { padding: 8px 14px; border: 1px solid #ccc; border-radius: 8px; background: #111; color: #fff; cursor: pointer; font-size: 14px; }
+      .todo-list { display: flex; flex-direction: column; gap: 8px; }
+      .todo-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #eee; border-radius: 8px; background: #fafafa; }
+      .todo-item span { flex: 1; font-size: 15px; }
+      .todo-item .desc { font-size: 12px; color: #888; display: block; }
+      .del-btn { border: none; background: none; cursor: pointer; color: #aaa; font-size: 18px; padding: 2px 4px; }
+      .del-btn:hover { color: #c00; }
+      .empty { text-align: center; color: #888; font-size: 14px; padding: 2rem 0; }
+    </style>
+  </head>
+  <body>
+  <div class="page">
+    <div id="auth-section" class="card">
+      <h1 id="auth-title">Welcome back</h1>
+      <p class="sub" id="auth-sub">Sign in to your todo app</p>
+      <div id="name-field" class="field" style="display:none">
+        <label>Name</label>
+        <input type="text" id="name" placeholder="Your name" />
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="email" placeholder="you@example.com" />
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="••••••" />
+      </div>
+      <div class="error" id="auth-error"></div>
+      <button class="btn btn-primary" onclick="handleAuth()" id="auth-btn">Sign in</button>
+      <div class="toggle">
+        <span id="toggle-text">Don't have an account?</span>
+        <a onclick="toggleMode()"> <span id="toggle-link">Register</span></a>
+      </div>
+    </div>
+
+    <div id="todos-section" style="display:none">
+      <div class="todo-header">
+        <div>
+          <h1>My todos</h1>
+          <p class="sub" style="margin:0" id="welcome-name"></p>
+        </div>
+        <button class="logout" onclick="logout()">Sign out</button>
+      </div>
+      <div class="card">
+        <div class="add-row">
+          <input type="text" id="new-title" placeholder="Add a new todo..." onkeydown="if(event.key==='Enter')addTodo()" />
+          <button onclick="addTodo()">+ Add</button>
+        </div>
+        <div class="todo-list" id="todo-list">
+          <div class="empty">Loading...</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = 'http://localhost:8080';
+    let token = null;
+    let isLogin = true;
+
+    function toggleMode() {
+      isLogin = !isLogin;
+      document.getElementById('auth-title').textContent = isLogin ? 'Welcome back' : 'Create account';
+      document.getElementById('auth-sub').textContent = isLogin ? 'Sign in to your todo app' : 'Register a new account';
+      document.getElementById('auth-btn').textContent = isLogin ? 'Sign in' : 'Register';
+      document.getElementById('name-field').style.display = isLogin ? 'none' : 'block';
+      document.getElementById('toggle-text').textContent = isLogin ? "Don't have an account?" : 'Already have an account?';
+      document.getElementById('toggle-link').textContent = isLogin ? 'Register' : 'Sign in';
+      document.getElementById('auth-error').textContent = '';
+    }
+
+    async function handleAuth() {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value.trim();
+      const name = document.getElementById('name').value.trim();
+      const errEl = document.getElementById('auth-error');
+      errEl.textContent = '';
+      if (!email || !password) { errEl.textContent = 'Please fill in all fields.'; return; }
+      const url = isLogin ? `${API}/login` : `${API}/register`;
+      const body = isLogin ? { email, password } : { name, email, password };
+      try {
+        const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+        const data = await res.json();
+        if (!res.ok) { errEl.textContent = data.message || 'Something went wrong'; return; }
+        token = data.token;
+        document.getElementById('welcome-name').textContent = name ? `Hi, ${name}!` : '';
+        document.getElementById('auth-section').style.display = 'none';
+        document.getElementById('todos-section').style.display = 'block';
+        loadTodos();
+      } catch(e) {
+        errEl.textContent = 'Cannot connect to server. Make sure it is running on port 8080.';
+      }
+    }
+
+    async function loadTodos() {
+      try {
+        const res = await fetch(`${API}/todos`, { headers: { Authorization: `Bearer ${token}` } });
+        const data = await res.json();
+        renderTodos(data.data || []);
+      } catch(e) {
+        document.getElementById('todo-list').innerHTML = '<div class="empty">Could not load todos.</div>';
+      }
+    }
+
+    function renderTodos(todos) {
+      const list = document.getElementById('todo-list');
+      if (!todos.length) { list.innerHTML = '<div class="empty">No todos yet. Add one above!</div>'; return; }
+      list.innerHTML = todos.map(t => `
+        <div class="todo-item">
+          <div style="flex:1">
+            <span>${t.title}</span>
+            ${t.description ? `<span class="desc">${t.description}</span>` : ''}
+          </div>
+          <button class="del-btn" onclick="deleteTodo(${t.id})">✕</button>
+        </div>
+      `).join('');
+    }
+
+    async function addTodo() {
+      const titleEl = document.getElementById('new-title');
+      const title = titleEl.value.trim();
+      if (!title) return;
+      try {
+        const res = await fetch(`${API}/todos`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` }, body: JSON.stringify({ title }) });
+        if (res.ok) { titleEl.value = ''; loadTodos(); }
+      } catch(e) {}
+    }
+
+    async function deleteTodo(id) {
+      try {
+        await fetch(`${API}/todos/${id}`, { method: 'DELETE', headers: { Authorization: `Bearer ${token}` } });
+        loadTodos();
+      } catch(e) {}
+    }
+
+    function logout() {
+      token = null;
+      document.getElementById('auth-section').style.display = 'block';
+      document.getElementById('todos-section').style.display = 'none';
+      document.getElementById('email').value = '';
+      document.getElementById('password').value = '';
+    }
+  </script>
+  </body>
+  </html>
